@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EFF1EA">
+<title>Ledger — Gmail Bill &amp; Invoice Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="setup-screen" class="screen">
+  <div class="setup-card">
+    <h1 class="wordmark">Ledger</h1>
+    <p class="setup-lede">Reads invoices, refunds and recurring bills out of your Gmail. Nothing leaves your device — it talks to Google directly from your phone.</p>
+
+    <div class="setup-step">
+      <span class="step-num">1</span>
+      <div>
+        <p class="step-title">Create a Google OAuth Client ID</p>
+        <p class="step-body">In <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a> → Credentials → Create Credentials → OAuth client ID → Web application. Add this page's exact URL under "Authorized JavaScript origins". Full steps are in README.md.</p>
+      </div>
+    </div>
+
+    <div class="setup-step">
+      <span class="step-num">2</span>
+      <div>
+        <p class="step-title">Paste your Client ID</p>
+        <input id="client-id-input" class="text-input" type="text" placeholder="xxxxxxxxxx-xxxxxxxxxxxxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+
+    <button id="save-client-id" class="btn btn-primary">Save &amp; continue</button>
+    <p class="setup-note">Your Client ID is stored only in this browser. You'll approve an "unverified app" warning the first time you sign in — that's expected for a personal-use app that hasn't gone through Google's public review.</p>
+  </div>
+</div>
+
+<div id="app-screen" class="screen hidden">
+  <header class="ledger-header">
+    <div class="header-top">
+      <h1 class="wordmark">Ledger</h1>
+      <button id="settings-btn" class="icon-btn" aria-label="Settings" title="Settings">⋯</button>
+    </div>
+
+    <div id="signed-out-panel" class="signed-out-panel">
+      <p>Sign in with Google to start reading your Gmail.</p>
+      <button id="signin-btn" class="btn btn-primary">Sign in with Google</button>
+    </div>
+
+    <div id="signed-in-panel" class="signed-in-panel hidden">
+      <div class="stat-row">
+        <div class="stat">
+          <span class="stat-label">Invoices &amp; purchases</span>
+          <span class="stat-value" id="stat-invoices">$0.00</span>
+        </div>
+        <div class="stat-rule"></div>
+        <div class="stat">
+          <span class="stat-label">Refunds received</span>
+          <span class="stat-value stat-green" id="stat-refunds">$0.00</span>
+        </div>
+        <div class="stat-rule"></div>
+        <div class="stat">
+          <span class="stat-label">Recurring / month</span>
+          <span class="stat-value stat-rust" id="stat-recurring">$0.00</span>
+        </div>
+      </div>
+      <div class="sync-row">
+        <button id="sync-btn" class="btn btn-secondary">Sync now</button>
+        <span id="sync-status" class="sync-status">Not synced yet</span>
+      </div>
+    </div>
+  </header>
+
+  <nav id="tab-row" class="tab-row hidden">
+    <button class="tab active" data-tab="all">All</button>
+    <button class="tab" data-tab="invoice">Invoices</button>
+    <button class="tab" data-tab="refund">Refunds</button>
+    <button class="tab" data-tab="recurring">Recurring</button>
+  </nav>
+
+  <main id="content" class="content hidden">
+    <section id="recurring-section" class="ledger-section hidden">
+      <h2 class="section-title">Recurring bills</h2>
+      <div id="recurring-list" class="recurring-list"></div>
+    </section>
+
+    <section id="list-section" class="ledger-section">
+      <h2 class="section-title" id="list-title">All activity</h2>
+      <div id="empty-state" class="empty-state hidden">
+        <p>Nothing here yet.</p>
+        <p class="empty-sub">Tap "Sync now" to pull invoices, refunds and bills from Gmail.</p>
+      </div>
+      <div id="txn-list" class="txn-list"></div>
+    </section>
+  </main>
+</div>
+
+<div id="settings-sheet" class="sheet hidden">
+  <div class="sheet-inner">
+    <h2 class="section-title">Settings</h2>
+
+    <div class="settings-row">
+      <label for="auto-sync-select">Auto-sync while app is open</label>
+      <select id="auto-sync-select" class="select-input">
+        <option value="0">Off</option>
+        <option value="15">Every 15 minutes</option>
+        <option value="30">Every 30 minutes</option>
+        <option value="60">Every hour</option>
+      </select>
+    </div>
+    <p class="settings-note">A web app can only sync while it's open on screen — it can't wake itself up in the background the way a native app can. Opening Ledger triggers a sync automatically; the interval above just keeps it fresh while you're looking at it.</p>
+
+    <div class="settings-row">
+      <label for="lookback-select">How far back to search</label>
+      <select id="lookback-select" class="select-input">
+        <option value="90">Last 3 months</option>
+        <option value="180" selected>Last 6 months</option>
+        <option value="365">Last 12 months</option>
+      </select>
+    </div>
+
+    <button id="reauth-btn" class="btn btn-secondary">Switch Google account</button>
+    <button id="clear-data-btn" class="btn btn-danger">Clear all synced data</button>
+    <button id="close-settings" class="btn btn-tertiary">Close</button>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="app.js"></script>
+</body>
+</html>
